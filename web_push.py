@@ -5,6 +5,9 @@ import BeautifulSoup as bs
 import requests
 import re
 import cPickle as pickle
+import multiprocessing
+import time
+
 from tgbot import TgBot as tgbot
 
 class WebPusher(object):
@@ -17,10 +20,11 @@ class WebPusher(object):
 
         self.bot = tgbot(token)
 
-    def get_news(self, push=True):
+    def get_news(self):
         """\
         获取最新的教务处新闻，并将其推送至tg账号
         """
+        new_news = []
         url = 'http://ded.nuaa.edu.cn/HomePage/articles/'
         hr = requests.get(url)
         if hr.status_code != 200:
@@ -32,17 +36,17 @@ class WebPusher(object):
              href = url+link.attrs[0][1]
              title = link.text
              if not (title, href) in self.news_list:
-                if push:
-                    self.push_news(title, href)
+                new_news.append(title, href)
                 self.news_list.append((title, href))
 
-        return self.news_list
+        return self.news_list,new_news()
 
     def get_news_appinn(self):
         """\
         Get the news from the website.
         存在一定缺陷（比如会把“精彩推荐”当新闻扒下来），懒得改了，弃了
         """
+        new_news = []
         html = bs.BeautifulSoup(requests.get('http://www.appinn.com').text)
         links = html.findAll('a', attrs={'rel':'bookmark'})
         for link in links:
@@ -52,9 +56,9 @@ class WebPusher(object):
                 elif attr == "title":
                     title = text
             if not (title, href) in self.news_list:
-                self.push_news(title, href)
+                new_news.append((title, href))
                 self.news_list.append((title, href))
-        return self.news_list
+        return self.news_list, new_news
 
     def push_news(self, title, href):
         """\
@@ -68,12 +72,31 @@ class WebPusher(object):
     # TODO: 在定时刷新的同时接收并处理用户命令，要用多线程
     # TODO: 做成一个订阅号
 
+    def get_command(self):
+        """\
+        接收来自用户的命令或信息
+        """
+        pass
+
+    def listening_news(self):
+        while True:
+            sleep(1800)
+            newl, new_news = self.get_news_appinn()
+            if new_news:
+                pass
+
+    def start():
+        """\
+        主函数
+        """
+        pass
+
     def __del__(self):
         pickle.dump(self.news_list, file(self.fname, 'wb'))
 
 
 if __name__ == '__main__':
     a = WebPusher('70292863:AAEzdiMxmhzT52xYsL6L8FbPi20lXU6WEpc')
-    news_list = a.get_news()
+    news_list = a.get_news_appinn()
     # for title, href in news_list:
     #     print title, href
