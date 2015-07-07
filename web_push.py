@@ -10,6 +10,7 @@ import multiprocessing
 import time
 import threading
 import Queue
+import sys
 
 from tgbot import TgBot as tgbot
 
@@ -17,6 +18,7 @@ class WebPusher(object):
     def __init__(self, token, fname="ded_nuaa.dat"):
         self.message_queue = Queue.Queue()                      # 命令队列
         self.news_queue = Queue.Queue()                         # 新闻队列，用于传输更新的新闻
+        self.run = True                                         # 判定是否需要结束程序
 
         self.fname = fname
         try:
@@ -34,7 +36,7 @@ class WebPusher(object):
         url = 'http://ded.nuaa.edu.cn/HomePage/articles/'
         hr = requests.get(url)
         if hr.status_code != 200:
-            return
+            return []
         html = bs.BeautifulSoup(hr.text)
         news_l = html.findAll('td', attrs={'class':'tit1'})
         for news in news_l:
@@ -66,18 +68,6 @@ class WebPusher(object):
                 self.news_list.append((title, href))
         return new_news
 
-    def update_news(self):
-        """\
-        定时刷新新闻
-        """
-        while True:
-            new_news = self.get_news()
-            for news in new_news:
-                self.news_queue.put(news)                      # 用news_queue传递消息
-            time.sleep(300)                                    # 定时刷新
-
-        print "News updated"
-
     def push_news(self, news):
         """\
         将新闻推送至tg账号
@@ -86,60 +76,87 @@ class WebPusher(object):
         title, href = news
         self.bot.send_message(90625935, '\n'.join([title, href]))
 
+    def update_news(self):
+        """\
+        定时刷新新闻
+        """
+        print "update_news start"
+
+        while self.run:
+            new_news = self.get_news()
+            for news in new_news:
+                self.news_queue.put(news)                        # 用news_queue传递消息
+            for i in xrange(300):
+                while self.run:
+                    time.sleep(1)                                      # 定时刷新
+
+        print "update_news stop"
+
     def update_messages(self):
         """\
         获取bot收到的信息
         """
-        result = self.bot.get_updates()
-        if result:
-            messages = result["result"]
-            for message in messages:
-                self.message_queue.put(message["message"])
-        print "Message updated"
+        print "update_messages start"
 
+        while self.run:
+            result = self.bot.get_updates()
+            if result:
+                messages = result["result"]
+                for message in messages:
+                    self.message_queue.put(message["message"])
 
-    # TODO: 进行定时刷新
-    # TODO: 接收来自用户的命令，比如/getlatest
+        print "update_messages stop"
+
+    # TODO: 添加一些用户命令，比如/get_latest
     # TODO: 做成一个订阅号
+    # TODO: 考虑用multiprocessing解决问题
 
-    # TODO: 在定时刷新的同时接收并处理用户命令，要用多线程
-
-    def execute_message(message):
+    def execute_message(self, message):
+        print message["text"]
         if message["text"] == "/test":
-            name = ' '.join(message["from"]["first_name"], message["from"]["last_name"])
-            bot.send_message(messgae["chat"]["id"], name+time.ctime())
+            name = ' '.join([message["from"]["first_name"], message["from"]["last_name"]])
+            self.bot.send_message(message["chat"]["id"], name+" "+time.ctime())
+        elif message["text"] == "/kill":
+            self.run = False
 
-    def listening(self):
-        print "Start listening"
-        while True:
+    def listen_message(self):
+        print "Start listening to messages"
+
+        while self.run:
             try:
                 while True:
                     message = self.message_queue.get_nowait()
                     self.execute_message(message)
             except Queue.Empty:
                 pass
-            
-            while True:
-                try:
-                    news_list = []
-                    while True:
-                        news = self.news_queue.get_nowait()
-                        news_list.append(news)
-                except Queue.Empty:
-                    for news in news_list:
-                        self.push_news(news)             
+
+        print "Stop listening to messages"
+
+    def listen_news(self):
+        print "Start listening to news"
+
+        while self.run:
+            news_list = []
+            try:
+                while True:
+                    news = self.news_queue.get_nowait()
+                    news_list.append(news)
+            except Queue.Empty:
+                for news in news_list:
+                    self.push_news(news)
+
+        print "Stop listening to news"
 
     def start(self):
         """\
         主函数
         """
-        message_thread = threading.Thread(target=self.update_messages)
-        news_thread = threading.Thread(target=self.update_news)
-        listen_thread = threading.Thread(target=self.listening)
-        # news_thread = threading.Thread
-        map(lambda x:x.start(), [message_thread, news_thread, listen_thread])
-        listen_thread.join()
-        # pass
+        func_list = [self.update_messages, self.update_news, self.listen_message, self.listen_news]
+
+        thread_list = [threading.Thread(target=f) for f in func_list]                                   # 创建线程
+        
+        # map(lambda x: x.setDaemon(False), thread_list)
+        map(lambda x: x.start(), thread_list)                                                           # 启动线程
 
     def __del__(self):
         pickle.dump(self.news_list, file(self.fname, 'wb'))
