@@ -78,11 +78,12 @@ class WebPusher(object):
 
         print "News updated"
 
-    def push_news(self, title, href):
+    def push_news(self, news):
         """\
         将新闻推送至tg账号
         """
         # TODO: 建立一个订阅号，可能要建立数据库
+        title, href = news
         self.bot.send_message(90625935, '\n'.join([title, href]))
 
     def update_messages(self):
