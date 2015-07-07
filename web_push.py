@@ -153,13 +153,11 @@ class WebPusher(object):
         主函数
         """
 
-        os.kill(os.getpid, signal.SIGKILL)
         func_list = [self.update_messages, self.update_news, self.listen_message, self.listen_news]
 
         thread_list = [threading.Thread(target=f) for f in func_list]                                   # 创建线程
-        map(lambda x: x.setDaemon(True), thread_list)
+        # map(lambda x: x.setDaemon(True), thread_list)
         map(lambda x: x.start(), thread_list)                                                           # 启动线程
-        # TODO: 捕获SIGKILL信号
 
     def __del__(self):
         pickle.dump(self.news_list, file(self.fname, 'wb'))
