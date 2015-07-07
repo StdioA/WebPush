@@ -6,11 +6,12 @@ import requests
 import re
 import json
 import cPickle as pickle
-import multiprocessing
 import time
 import threading
 import Queue
 import sys
+import os
+import signal
 
 from tgbot import TgBot as tgbot
 
@@ -107,7 +108,7 @@ class WebPusher(object):
 
         print "update_messages stop"
 
-    # TODO: 添加一些用户命令，比如/get_latest
+    # TODO: 添加一些\户命令，比如/get_latest
     # TODO: 做成一个订阅号
     # TODO: 考虑用multiprocessing解决问题
 
@@ -151,12 +152,14 @@ class WebPusher(object):
         """\
         主函数
         """
+
+        os.kill(os.getpid, signal.SIGKILL)
         func_list = [self.update_messages, self.update_news, self.listen_message, self.listen_news]
 
         thread_list = [threading.Thread(target=f) for f in func_list]                                   # 创建线程
-        
-        # map(lambda x: x.setDaemon(False), thread_list)
+        map(lambda x: x.setDaemon(True), thread_list)
         map(lambda x: x.start(), thread_list)                                                           # 启动线程
+        # TODO: 捕获SIGKILL信号
 
     def __del__(self):
         pickle.dump(self.news_list, file(self.fname, 'wb'))
