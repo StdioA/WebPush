@@ -4,14 +4,20 @@
 import BeautifulSoup as bs
 import requests
 import re
+import json
 import cPickle as pickle
 import multiprocessing
 import time
+import threading
+import Queue
 
 from tgbot import TgBot as tgbot
 
 class WebPusher(object):
     def __init__(self, token, fname="ded_nuaa.dat"):
+        self.message_queue = Queue.Queue()                      # 命令队列
+        self.news_queue = Queue.Queue()                         # 新闻队列，用于传输更新的新闻
+
         self.fname = fname
         try:
             self.news_list = pickle.load(file(fname, 'rb'))
@@ -36,10 +42,10 @@ class WebPusher(object):
              href = url+link.attrs[0][1]
              title = link.text
              if not (title, href) in self.news_list:
-                new_news.append(title, href)
+                new_news.append((title, href))
                 self.news_list.append((title, href))
 
-        return self.news_list,new_news()
+        return new_news
 
     def get_news_appinn(self):
         """\
@@ -58,7 +64,19 @@ class WebPusher(object):
             if not (title, href) in self.news_list:
                 new_news.append((title, href))
                 self.news_list.append((title, href))
-        return self.news_list, new_news
+        return new_news
+
+    def update_news(self):
+        """\
+        定时刷新新闻
+        """
+        while True:
+            new_news = self.get_news()
+            for news in new_news:
+                self.news_queue.put(news)                      # 用news_queue传递消息
+            time.sleep(300)                                    # 定时刷新
+
+        print "News updated"
 
     def push_news(self, title, href):
         """\
@@ -67,29 +85,60 @@ class WebPusher(object):
         # TODO: 建立一个订阅号，可能要建立数据库
         self.bot.send_message(90625935, '\n'.join([title, href]))
 
+    def update_messages(self):
+        """\
+        获取bot收到的信息
+        """
+        result = self.bot.get_updates()
+        if result:
+            messages = result["result"]
+            for message in messages:
+                self.message_queue.put(message["message"])
+        print "Message updated"
+
+
     # TODO: 进行定时刷新
     # TODO: 接收来自用户的命令，比如/getlatest
-    # TODO: 在定时刷新的同时接收并处理用户命令，要用多线程
     # TODO: 做成一个订阅号
 
-    def get_command(self):
-        """\
-        接收来自用户的命令或信息
-        """
-        pass
+    # TODO: 在定时刷新的同时接收并处理用户命令，要用多线程
 
-    def listening_news(self):
+    def execute_message(message):
+        if message["text"] == "/test":
+            name = ' '.join(message["from"]["first_name"], message["from"]["last_name"])
+            bot.send_message(messgae["chat"]["id"], name+time.ctime())
+
+    def listening(self):
+        print "Start listening"
         while True:
-            sleep(1800)
-            newl, new_news = self.get_news_appinn()
-            if new_news:
+            try:
+                while True:
+                    message = self.message_queue.get_nowait()
+                    self.execute_message(message)
+            except Queue.Empty:
                 pass
+            
+            while True:
+                try:
+                    news_list = []
+                    while True:
+                        news = self.news_queue.get_nowait()
+                        news_list.append(news)
+                except Queue.Empty:
+                    for news in news_list:
+                        self.push_news(news)             
 
-    def start():
+    def start(self):
         """\
         主函数
         """
-        pass
+        message_thread = threading.Thread(target=self.update_messages)
+        news_thread = threading.Thread(target=self.update_news)
+        listen_thread = threading.Thread(target=self.listening)
+        # news_thread = threading.Thread
+        map(lambda x:x.start(), [message_thread, news_thread, listen_thread])
+        listen_thread.join()
+        # pass
 
     def __del__(self):
         pickle.dump(self.news_list, file(self.fname, 'wb'))
@@ -97,6 +146,6 @@ class WebPusher(object):
 
 if __name__ == '__main__':
     a = WebPusher('70292863:AAEzdiMxmhzT52xYsL6L8FbPi20lXU6WEpc')
-    news_list = a.get_news_appinn()
+    a.start()
     # for title, href in news_list:
     #     print title, href

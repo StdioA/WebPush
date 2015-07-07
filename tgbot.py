@@ -162,5 +162,6 @@ class TgBot(object):
         conf.write(open("./config.cfg", "w"))
 
 if __name__ == '__main__':
-    bot = TgBot("<Your-Telegram-bot-token>")
+    # bot = TgBot("<Your-Telegram-bot-token>")
+    bot = TgBot("70292863:AAEzdiMxmhzT52xYsL6L8FbPi20lXU6WEpc")
     bot.test()
