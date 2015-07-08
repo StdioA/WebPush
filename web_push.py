@@ -38,7 +38,7 @@ class WebPusher(object):
             return []
         html = bs.BeautifulSoup(hr.text)
         news_l = html.findAll('td', attrs={'class': 'tit1'})
-        for news in news_l:
+        for news in reversed(news_l):
             link = news.findChild('a')
             href = url+link.attrs[0][1]
             title = link.text
@@ -170,7 +170,7 @@ class WebPusher(object):
         map(lambda x: x.join(), thread_list)
 
     def __del__(self):
-        print "Delete!"
+        # print "Delete!"
         print "Bot stop:", self.bot.offset
         pickle.dump(self.news_list, file(self.fname, 'wb'))
         # del self.bot
