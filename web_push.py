@@ -18,7 +18,7 @@ from tgbot import TgBot as tgbot
 class WebPusher(object):
     def __init__(self, token, fname="ded_nuaa.dat"):
         self.message_queue = Queue.Queue()                      # 命令队列
-        self.news_queue = Queue.Queue()                         # 新闻队列，用于传输更新的新闻
+        # self.news_queue = Queue.Queue()                       # 新闻队列，用于传输更新的新闻
         self.run = True                                         # 判定是否需要结束程序
 
         self.fname = fname
@@ -49,6 +49,7 @@ class WebPusher(object):
                 self.news_list.append((title, href))
 
         return new_news
+        # TODO: 添加新闻发布日期
 
     def get_news_appinn(self):
         """\
@@ -83,13 +84,12 @@ class WebPusher(object):
         """
         print "update_news start"
 
-        while self.run:
+        while True:
             new_news = self.get_news()
             for news in new_news:
-                self.news_queue.put(news)                        # 用news_queue传递消息
-            for i in xrange(300):
-                while self.run:
-                    time.sleep(1)                                      # 定时刷新
+                self.push_news(news)
+
+            time.sleep(300)
 
         print "update_news stop"
 
@@ -112,6 +112,15 @@ class WebPusher(object):
     # TODO: 做成一个订阅号
     # TODO: 考虑用multiprocessing解决问题
 
+    def listen_message(self):
+        print "Start listening to messages"
+
+        while self.run:
+            message = self.message_queue.get()
+            self.execute_message(message)
+
+        print "Stop listening to messages"
+
     def execute_message(self, message):
         print message["text"]
         if message["text"] == "/test":
@@ -120,43 +129,15 @@ class WebPusher(object):
         elif message["text"] == "/kill":
             self.run = False
 
-    def listen_message(self):
-        print "Start listening to messages"
-
-        while self.run:
-            try:
-                while True:
-                    message = self.message_queue.get_nowait()
-                    self.execute_message(message)
-            except Queue.Empty:
-                pass
-
-        print "Stop listening to messages"
-
-    def listen_news(self):
-        print "Start listening to news"
-
-        while self.run:
-            news_list = []
-            try:
-                while True:
-                    news = self.news_queue.get_nowait()
-                    news_list.append(news)
-            except Queue.Empty:
-                for news in news_list:
-                    self.push_news(news)
-
-        print "Stop listening to news"
-
     def start(self):
         """\
         主函数
         """
 
-        func_list = [self.update_messages, self.update_news, self.listen_message, self.listen_news]
+        func_list = [self.update_messages, self.update_news, self.listen_message] #, self.listen_news]
 
         thread_list = [threading.Thread(target=f) for f in func_list]                                   # 创建线程
-        # map(lambda x: x.setDaemon(True), thread_list)
+        map(lambda x: x.setDaemon(True), [thread_list[1]])
         map(lambda x: x.start(), thread_list)                                                           # 启动线程
 
     def __del__(self):
