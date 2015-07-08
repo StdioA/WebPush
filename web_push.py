@@ -3,23 +3,19 @@
 
 import BeautifulSoup as bs
 import requests
-import re
-import json
 import cPickle as pickle
 import time
 import threading
 import Queue
-import sys
-import os
-import signal
 
 from tgbot import TgBot as tgbot
 
+
 class WebPusher(object):
     def __init__(self, token, fname="ded_nuaa.dat"):
-        self.message_queue = Queue.Queue()                      # 命令队列
-        # self.news_queue = Queue.Queue()                       # 新闻队列，用于传输更新的新闻
-        self.run = True                                         # 判定是否需要结束程序
+        self.__message_queue = Queue.Queue()                      # 命令队列
+        self.__news_queue = Queue.Queue()                         # 新闻队列，用于传输更新的新闻
+        self.run = True                                           # 判定是否需要结束程序
 
         self.fname = fname
         try:
@@ -27,7 +23,9 @@ class WebPusher(object):
         except IOError:
             self.news_list = []
 
+        # del self.news_list[0]
         self.bot = tgbot(token)
+        print "Bot start:", self.bot.offset
 
     def get_news(self):
         """\
@@ -39,12 +37,12 @@ class WebPusher(object):
         if hr.status_code != 200:
             return []
         html = bs.BeautifulSoup(hr.text)
-        news_l = html.findAll('td', attrs={'class':'tit1'})
+        news_l = html.findAll('td', attrs={'class': 'tit1'})
         for news in news_l:
-             link = news.findChild('a')
-             href = url+link.attrs[0][1]
-             title = link.text
-             if not (title, href) in self.news_list:
+            link = news.findChild('a')
+            href = url+link.attrs[0][1]
+            title = link.text
+            if not (title, href) in self.news_list:
                 new_news.append((title, href))
                 self.news_list.append((title, href))
 
@@ -58,7 +56,7 @@ class WebPusher(object):
         """
         new_news = []
         html = bs.BeautifulSoup(requests.get('http://www.appinn.com').text)
-        links = html.findAll('a', attrs={'rel':'bookmark'})
+        links = html.findAll('a', attrs={'rel': 'bookmark'})
         for link in links:
             for attr, text in link.attrs:
                 if attr == "href":
@@ -82,70 +80,107 @@ class WebPusher(object):
         """\
         定时刷新新闻
         """
-        print "update_news start"
+        print "Start updating news"
 
         while True:
             new_news = self.get_news()
             for news in new_news:
-                self.push_news(news)
+                self.__news_queue.put(news)
 
-            time.sleep(300)
+            for i in range(300):
+                if not self.run:
+                    return
+                time.sleep(1)
 
-        print "update_news stop"
+        print "Stop updating news"
+
+    def listen_news(self):
+        """\
+        接收新闻并进行处理（推送）
+        """
+        print "Start listening to news"
+
+        while self.run or (not self.__news_queue.empty()):    # 若run变为0，则将消息处理完再退出线程
+            try:
+                while True:
+                    news = self.__news_queue.get(timeout=1)   # 阻塞方式刷新，最长时间为1s
+                    self.push_news(news)
+            except Queue.Empty:
+                pass
+
+        print "Stop listening to news"
 
     def update_messages(self):
         """\
         获取bot收到的信息
         """
-        print "update_messages start"
+        print "Start updating messages"
 
         while self.run:
             result = self.bot.get_updates()
             if result:
                 messages = result["result"]
                 for message in messages:
-                    self.message_queue.put(message["message"])
+                    self.__message_queue.put(message["message"])
 
-        print "update_messages stop"
+        print "Stop updating messages"
 
-    # TODO: 添加一些\户命令，比如/get_latest
-    # TODO: 做成一个订阅号
-    # TODO: 考虑用multiprocessing解决问题
-
-    def listen_message(self):
+    def listen_messages(self):
+        """\
+        监听收到的消息并按顺序进行处理
+        """
         print "Start listening to messages"
 
-        while self.run:
-            message = self.message_queue.get()
-            self.execute_message(message)
+        while self.run or (not self.__news_queue.empty()):  # 若run变为0，则处理完待处理的消息再结束线程
+            try:
+                message = self.__message_queue.get(timeout=1)
+                self.execute_message(message)
+            except Queue.Empty:
+                pass
 
         print "Stop listening to messages"
 
     def execute_message(self, message):
-        print message["text"]
+        """\
+        处理收到的消息
+        """
+        name = " ".join([message["from"]["first_name"], message["from"]["last_name"]])
+        print "{text} from {name}".format(text=message["text"], name=name)
+
         if message["text"] == "/test":
             name = ' '.join([message["from"]["first_name"], message["from"]["last_name"]])
             self.bot.send_message(message["chat"]["id"], name+" "+time.ctime())
-        elif message["text"] == "/kill":
+
+        elif message["text"] == "/getlatest":
+            title, href = self.news_list[-1]
+            self.bot.send_message(message["chat"]["id"], '\n'.join([title, href]))
+
+        elif message["text"] == "/kill" and message["chat"]["id"] == 90625935:
             self.run = False
 
     def start(self):
         """\
         主函数
         """
-
-        func_list = [self.update_messages, self.update_news, self.listen_message] #, self.listen_news]
+        func_list = [self.update_messages, self.update_news, self.listen_messages, self.listen_news]
 
         thread_list = [threading.Thread(target=f) for f in func_list]                                   # 创建线程
-        map(lambda x: x.setDaemon(True), [thread_list[1]])
+        # map(lambda x: x.setDaemon(True), [thread_list[1]])
         map(lambda x: x.start(), thread_list)                                                           # 启动线程
+        map(lambda x: x.join(), thread_list)
 
     def __del__(self):
+        print "Delete!"
+        print "Bot stop:", self.bot.offset
         pickle.dump(self.news_list, file(self.fname, 'wb'))
-
+        # del self.bot
 
 if __name__ == '__main__':
     a = WebPusher('70292863:AAEzdiMxmhzT52xYsL6L8FbPi20lXU6WEpc')
     a.start()
-    # for title, href in news_list:
-    #     print title, href
+    del a
+
+# TODO: 添加一些常用命令，比如/get_latest
+# TODO: 做成一个订阅号
+# TODO: 考虑用multiprocessing解决问题（如果CPU是单核，多线程就可以了，不过可以考虑使用multiprocessing.dummy）
+# TODO: 用logging记录调试信息(可以用tail -f实时查看)

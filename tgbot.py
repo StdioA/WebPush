@@ -5,6 +5,7 @@ import requests
 import json
 import ConfigParser
 
+
 class RemoteServerException(Exception):                                     # TODO: 考虑将状态码在本类中进行处理
     def __str__(self):
         if len(self.args) == 2:
@@ -13,9 +14,11 @@ class RemoteServerException(Exception):                                     # TO
         elif self.args:
             return self.args[0]
 
+
 class ActionIsNotAcceptable(Exception):
     def __str__(self):
         return self.args[0], "is not acceptable."
+
 
 class TgBot(object):
     """\
@@ -46,7 +49,7 @@ class TgBot(object):
         test() => None
         """
         try:
-            result = self.get_me()
+            self.get_me()
         except RemoteServerException, exc:
             if exc.args[0] == 401:
                 print "Token unauthorized, please check your bot token."
@@ -101,11 +104,10 @@ class TgBot(object):
         elif not isinstance(message_id, int):
             raise TypeError("Parameter message_id should be a integer")
 
-        kwargs = {
-                    "chat_id": chat_id,
-                    "from_chat_id": from_chat_id,
-                    "message_id": message_id,
-                }
+        kwargs = {"chat_id": chat_id,
+                  "from_chat_id": from_chat_id,
+                  "message_id": message_id
+                  }
         hr = requests.post(self.url.format(method="forwardMessage"), params=kwargs)
 
         if hr.status_code == 200:
@@ -121,7 +123,7 @@ class TgBot(object):
         """
         actions = ["typing", "upload_photo", "record_video", "upload_video",
                     "record_audio", "upload_audio", "upload_document", "find_location"]
-        if not action in actions:
+        if action not in actions:
             raise ActionIsNotAcceptable(action)
 
         kwargs = {"chat_id": chat_id, "action": action}
@@ -131,7 +133,6 @@ class TgBot(object):
             return json.loads(hr.text)
         else:
             raise RemoteServerException(hr.status_code)
-
 
     def get_updates(self, offset=None, limit=0, timeout=0):
         """\
@@ -151,8 +152,6 @@ class TgBot(object):
             return result
         else:
             raise RemoteServerException(hr.status_code)
-
-
 
     def __del__(self):
         conf = ConfigParser.ConfigParser()
