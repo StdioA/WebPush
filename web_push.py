@@ -20,6 +20,7 @@ class WebPusher(object):
         self.__news_queue = Queue.Queue()                         # 新闻队列，用于传输更新的新闻
         self.run = True                                           # 判定是否需要结束程序
 
+        self.news_getter = self.get_news_linux_cn                 # 新闻抓取函数，配置单独提出来
         self.fname = fname
         try:
             self.news_list = pickle.load(file(fname, 'rb'))
@@ -30,17 +31,19 @@ class WebPusher(object):
         self.bot = tgbot(token)
         print "Bot start:", self.bot.offset
 
-    def get_news(self):
+    def get_news_ded(self):
         """\
-        获取最新的教务处新闻，并将其推送至tg账号
+        获取最新的教务处新闻
         """
         new_news = []
         url = 'http://ded.nuaa.edu.cn/HomePage/articles/'
         hr = requests.get(url)
         if hr.status_code != 200:
             return []
+
         html = bs.BeautifulSoup(hr.text)
         news_l = html.findAll('td', attrs={'class': 'tit1'})
+
         for news in reversed(news_l):
             link = news.findChild('a')
             href = url+link.attrs[0][1]
@@ -51,6 +54,30 @@ class WebPusher(object):
 
         return new_news
         # TODO: 添加新闻发布日期
+
+    def get_news_linux_cn(self):
+        """\
+        linux.cn新闻获取函数
+        """
+        new_news = []
+        url = "https://linux.cn/"
+        hr = requests.get(url)
+        if hr.status_code != 200:
+            return []
+
+        html = bs.BeautifulSoup(hr.text)
+        nl = html.findAll("ul", attrs={"class": "article-list leftpic"})
+        for mod in reversed(nl):
+            news_l = mod.findAll("a", attrs={"style":"color:#07B;"})
+            for news in reversed(news_l):
+                attrs = dict(news.attrs)
+                title = attrs["title"]
+                href = attrs["href"]
+                if not (title, href) in self.news_list:
+                    new_news.append((title, href))
+                    self.news_list.append((title, href))
+
+        return new_news
 
     def get_news_appinn(self):
         """\
@@ -77,6 +104,7 @@ class WebPusher(object):
         """
         # TODO: 建立一个订阅号，可能要建立数据库
         title, href = news
+        print "Puch news:", title
         self.bot.send_message(90625935, '\n'.join([title, href]))
 
     def update_news(self):
@@ -86,7 +114,7 @@ class WebPusher(object):
         print "Start updating news"
 
         while True:
-            new_news = self.get_news()
+            new_news = self.news_getter()
             for news in new_news:
                 self.__news_queue.put(news)
 
@@ -179,11 +207,11 @@ class WebPusher(object):
         # del self.bot
 
 if __name__ == '__main__':
-    a = WebPusher('70292863:AAEzdiMxmhzT52xYsL6L8FbPi20lXU6WEpc')
+    a = WebPusher('70292863:AAEzdiMxmhzT52xYsL6L8FbPi20lXU6WEpc', fname="linux_cn.dat")
     a.start()
     del a
 
-# TODO: 添加一些常用命令，比如/get_latest
+# TODO: 添加一些常用命令
 # TODO: 做成一个订阅号
 # TODO: 考虑用multiprocessing解决问题（如果CPU是单核，多线程就可以了，不过可以考虑使用multiprocessing.dummy）
 # TODO: 用logging记录调试信息(可以用tail -f实时查看)
