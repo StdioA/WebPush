@@ -7,9 +7,12 @@ import cPickle as pickle
 import time
 import threading
 import Queue
+import sys
 
 from tgbot import TgBot as tgbot
 
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 class WebPusher(object):
     def __init__(self, token, fname="ded_nuaa.dat"):
