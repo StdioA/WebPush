@@ -104,7 +104,7 @@ class WebPusher(object):
         """
         # TODO: 建立一个订阅号，可能要建立数据库
         title, href = news
-        print "Puch news:", title
+        print "Push news:", href
         self.bot.send_message(90625935, '\n'.join([title, href]))
 
     def update_news(self):
