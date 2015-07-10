@@ -2,7 +2,6 @@
 # coding: utf-8
 
 import requests
-import json
 import ConfigParser
 
 
@@ -65,7 +64,7 @@ class TgBot(object):
         """
         hr = requests.post(self.url.format(method="getMe"))
         if hr.status_code == 200:
-            return json.loads(hr.text)
+            return hr.json()
         else:
             raise RemoteServerException(hr.status_code)
 
@@ -85,7 +84,7 @@ class TgBot(object):
         hr = requests.post(self.url.format(method="sendMessage"), params=kwargs)
 
         if hr.status_code == 200:
-            return json.loads(hr.text)
+            return hr.json()
         elif hr.status_code == 400:
             raise RemoteServerException(hr.status_code, "The chat id doesn't exist")
         else:
@@ -111,7 +110,7 @@ class TgBot(object):
         hr = requests.post(self.url.format(method="forwardMessage"), params=kwargs)
 
         if hr.status_code == 200:
-            return json.loads(hr.text)
+            return hr.json()
         elif hr.status_code == 400:
             raise RemoteServerException(hr.status_code, "The params aren't valid")
         else:
@@ -130,7 +129,7 @@ class TgBot(object):
         hr = requests.post(self.url.format(method="sendChatAction"), params=kwargs)
 
         if hr.status_code == 200:
-            return json.loads(hr.text)
+            return hr.json()
         else:
             raise RemoteServerException(hr.status_code)
 
@@ -146,7 +145,7 @@ class TgBot(object):
         hr = requests.post(self.url.format(method="getUpdates"), params=kwargs)
 
         if hr.status_code == 200:
-            result = json.loads(hr.text)
+            result = hr.json()
             if result["result"]:
                 self.offset = result["result"][-1]["update_id"]+1
             return result
