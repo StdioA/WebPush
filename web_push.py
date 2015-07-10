@@ -207,8 +207,8 @@ class WebPusher(object):
         # del self.bot
 
 if __name__ == '__main__':
-    a = WebPusher('70292863:AAEzdiMxmhzT52xYsL6L8FbPi20lXU6WEpc', fname="linux_cn.dat")
-    a.start()
+    pusher = WebPusher('70292863:AAEzdiMxmhzT52xYsL6L8FbPi20lXU6WEpc', fname="linux_cn.dat")
+    pusher.start()
 
 # TODO: 添加一些常用命令
 # TODO: 做成一个订阅号
