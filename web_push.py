@@ -166,7 +166,9 @@ class WebPusher(object):
         /getlatest   -  获取最近新闻
         /subscribe   -  进行新闻订阅
         /unsubscribe -  取消新闻订阅"""
-        name = " ".join([message["from"]["first_name"], message["from"]["last_name"]])
+        fn = message["from"].get("first_name", "")
+        ln = message["from"].get("last_name", "")
+        name = " ".join([fn, ln])
         print "{text} from {name}".format(text=message["text"], name=name)
 
         text = message["text"]
