@@ -14,6 +14,7 @@ from tgbot import TgBot as tgbot
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
+
 class WebPusher(object):
     def __init__(self, token, fname="ded_nuaa.dat"):
         self.__message_queue = Queue.Queue()                      # 命令队列
@@ -26,6 +27,11 @@ class WebPusher(object):
             self.news_list = pickle.load(file(fname, 'rb'))
         except IOError:
             self.news_list = []
+
+        try:
+            self.subscriber = pickle.load(file("subscriber.dat", 'rb'))
+        except IOError:
+            self.subscriber = []
 
         # del self.news_list[0]
         self.bot = tgbot(token)
@@ -72,40 +78,21 @@ class WebPusher(object):
             for news in reversed(news_l):
                 attrs = dict(news.attrs)
                 title = attrs.get("title", None)
-                href = attrs.get("href",None)
+                href = attrs.get("href", None)
                 if (title and href) and ((title, href) not in self.news_list):
                     new_news.append((title, href))
                     self.news_list.append((title, href))
 
         return new_news
 
-    def get_news_appinn(self):
-        """\
-        Get the news from the website.
-        存在一定缺陷（比如会把“精彩推荐”当新闻扒下来），懒得改了，弃了
-        """
-        new_news = []
-        html = bs.BeautifulSoup(requests.get('http://www.appinn.com').text)
-        links = html.findAll('a', attrs={'rel': 'bookmark'})
-        for link in links:
-            for attr, text in link.attrs:
-                if attr == "href":
-                    href = text
-                elif attr == "title":
-                    title = text
-            if not (title, href) in self.news_list:
-                new_news.append((title, href))
-                self.news_list.append((title, href))
-        return new_news
-
     def push_news(self, news):
         """\
         将新闻推送至tg账号
         """
-        # TODO: 建立一个订阅号，可能要建立数据库
         title, href = news
         print "Push news:", href
-        self.bot.send_message(90625935, '\n'.join([title, href]))
+        for user in self.subscriber:
+            self.bot.send_message(user, '\n'.join([title, href]))
 
     def update_news(self):
         """\
@@ -120,10 +107,9 @@ class WebPusher(object):
 
             for i in range(300):
                 if not self.run:
+                    print "Stop updating news"
                     return
                 time.sleep(1)
-
-        print "Stop updating news"
 
     def listen_news(self):
         """\
@@ -175,18 +161,43 @@ class WebPusher(object):
         """\
         处理收到的消息
         """
+        welcome = u"""欢迎使用linux.cn非官方新闻推送bot！
+        命令列表：
+        /getlatest   -  获取最近新闻
+        /subscribe   -  进行新闻订阅
+        /unsubscribe -  取消新闻订阅"""
         name = " ".join([message["from"]["first_name"], message["from"]["last_name"]])
         print "{text} from {name}".format(text=message["text"], name=name)
 
-        if message["text"] == "/test":
-            name = ' '.join([message["from"]["first_name"], message["from"]["last_name"]])
-            self.bot.send_message(message["chat"]["id"], name+" "+time.ctime())
+        text = message["text"]
+        userid = message["from"]["id"]
 
-        elif message["text"] == "/getlatest":
+        if text == "/start":
+            self.bot.send_message(message["from"]["id"], welcome)
+
+        elif text == "/subscribe":
+            if userid not in self.subscriber:
+                self.subscriber.append(userid)
+                self.bot.send_message(userid, u"订阅成功！")
+            else:
+                self.bot.send_message(userid, u"您已订阅该服务")
+
+        elif text == "/unsubscribe":
+            if userid not in self.subscriber:
+                self.bot.send_message(userid, u"您未订阅该服务")
+            else:
+                self.subscriber.remove(userid)
+                self.bot.send_message(userid, u"已取消订阅！")
+
+        elif text == "/getlatest":
             title, href = self.news_list[-1]
             self.bot.send_message(message["chat"]["id"], '\n'.join([title, href]))
 
-        elif message["text"] == "/kill" and message["chat"]["id"] == 90625935:
+        elif text == "/test":
+            name = ' '.join([message["from"]["first_name"], message["from"]["last_name"]])
+            self.bot.send_message(message["chat"]["id"], name+" "+time.ctime())
+
+        elif text == "/kill" and message["chat"]["id"] == 90625935:
             self.run = False
 
     def start(self):
@@ -200,15 +211,15 @@ class WebPusher(object):
         map(lambda x: x.start(), thread_list)                                                           # 启动线程
         map(lambda x: x.join(), thread_list)
 
-    def __del__(self):
-        # print "Delete!"
-        print "Bot stop:", self.bot.offset
+        # 自己进行结束工作要比写在__del__里更稳妥！
         pickle.dump(self.news_list, file(self.fname, 'wb'))
-        # del self.bot
+        pickle.dump(self.subscriber, file("subscriber.dat", 'wb'))
+        print "Bot stop:", self.bot.offset
 
 if __name__ == '__main__':
-    pusher = WebPusher('70292863:AAEzdiMxmhzT52xYsL6L8FbPi20lXU6WEpc', fname="linux_cn.dat")
+    pusher = WebPusher('117959799:AAF4O83t0Syk1b3vklVMK88aIurlB9wfMOE', fname="linux_cn.dat")
     pusher.start()
+    del pusher
 
 # TODO: 添加一些常用命令
 # TODO: 做成一个订阅号
