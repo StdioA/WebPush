@@ -68,12 +68,12 @@ class WebPusher(object):
         html = bs.BeautifulSoup(hr.text)
         nl = html.findAll("ul", attrs={"class": "article-list leftpic"})
         for mod in reversed(nl):
-            news_l = mod.findAll("a", attrs={"style":"color:#07B;"})
+            news_l = mod.findAll("a", attrs={"target": "_blank"})
             for news in reversed(news_l):
                 attrs = dict(news.attrs)
-                title = attrs["title"]
-                href = attrs["href"]
-                if not (title, href) in self.news_list:
+                title = attrs.get("title", None)
+                href = attrs.get("href",None)
+                if (title and href) and ((title, href) not in self.news_list):
                     new_news.append((title, href))
                     self.news_list.append((title, href))
 
@@ -209,7 +209,6 @@ class WebPusher(object):
 if __name__ == '__main__':
     a = WebPusher('70292863:AAEzdiMxmhzT52xYsL6L8FbPi20lXU6WEpc', fname="linux_cn.dat")
     a.start()
-    del a
 
 # TODO: 添加一些常用命令
 # TODO: 做成一个订阅号
