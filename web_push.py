@@ -90,7 +90,11 @@ class WebPusher(object):
         将新闻推送至tg账号
         """
         title, href = news
-        print "Push news:", href
+        try:
+            print "Push news:", title
+        except UnicodeEncodeError:
+            print "Push news:", href
+
         for user in self.subscriber:
             self.bot.send_message(user, '\n'.join([title, href]))
 
@@ -161,32 +165,43 @@ class WebPusher(object):
         """\
         处理收到的消息
         """
-        welcome = u"""欢迎使用linux.cn非官方新闻推送bot！
-        命令列表：
+        welcome = u"欢迎使用linux.cn非官方新闻推送bot！\n"
+
+        help_str = u"""命令列表：
         /getlatest   -  获取最近新闻
         /subscribe   -  进行新闻订阅
-        /unsubscribe -  取消新闻订阅"""
+        /unsubscribe -  取消新闻订阅
+        /help        -  获取帮助信息"""
+
         fn = message["from"].get("first_name", "")
         ln = message["from"].get("last_name", "")
+        if len(fn) > 10:                                                    # 避免出现名字特别长导致刷屏的情况
+            fn = fn[:9]+"…"
+        if len(ln) > 10:
+            ln = ln[:9]+"…"
         name = " ".join([fn, ln])
+
         print "{text} from {name}".format(text=message["text"], name=name)
 
         text = message["text"]
         userid = message["from"]["id"]
 
         if text == "/start":
-            self.bot.send_message(message["from"]["id"], welcome)
+            self.bot.send_message(message["from"]["id"], welcome+help_str)
+
+        elif text == "/help":
+            self.bot.send_message(message["from"]["id"], help_str)
 
         elif text == "/subscribe":
             if userid not in self.subscriber:
                 self.subscriber.append(userid)
                 self.bot.send_message(userid, u"订阅成功！")
             else:
-                self.bot.send_message(userid, u"您已订阅该服务")
+                self.bot.send_message(userid, u"您已订阅该服务！")
 
         elif text == "/unsubscribe":
             if userid not in self.subscriber:
-                self.bot.send_message(userid, u"您未订阅该服务")
+                self.bot.send_message(userid, u"您未订阅该服务！")
             else:
                 self.subscriber.remove(userid)
                 self.bot.send_message(userid, u"已取消订阅！")
