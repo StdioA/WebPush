@@ -109,6 +109,8 @@ class WebPusher(object):
             for news in new_news:
                 self.__news_queue.put(news)
 
+            pickle.dump(self.news_list, file(self.fname, 'wb')) # 定时将新闻列表写回，防止出现程序意外停止重启后推送一堆新闻的情况
+
             for i in range(300):
                 if not self.run:
                     print "Stop updating news"
