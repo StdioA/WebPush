@@ -236,7 +236,7 @@ class WebPusher(object):
         print "Bot stop:", self.bot.offset
 
 if __name__ == '__main__':
-    pusher = WebPusher('70292863:AAEzdiMxmhzT52xYsL6L8FbPi20lXU6WEpc', fname="ded_nuaa.dat")
+    pusher = WebPusher('132880227:AAGRvutZVf110Yc2Xbb43fn9xCQlDRkaLiY', fname="ded_nuaa.dat")
     pusher.start()
     del pusher
 
