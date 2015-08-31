@@ -21,7 +21,7 @@ class WebPusher(object):
         self.__news_queue = Queue.Queue()                         # 新闻队列，用于传输更新的新闻
         self.run = True                                           # 判定是否需要结束程序
 
-        self.news_getter = self.get_news_linux_cn                 # 新闻抓取函数，配置单独提出来
+        self.news_getter = self.get_news_ded                      # 新闻抓取函数，配置单独提出来
         self.fname = fname
         try:
             self.news_list = pickle.load(file(fname, 'rb'))
@@ -236,7 +236,7 @@ class WebPusher(object):
         print "Bot stop:", self.bot.offset
 
 if __name__ == '__main__':
-    pusher = WebPusher('117959799:AAF4O83t0Syk1b3vklVMK88aIurlB9wfMOE', fname="linux_cn.dat")
+    pusher = WebPusher('70292863:AAEzdiMxmhzT52xYsL6L8FbPi20lXU6WEpc', fname="ded_nuaa.dat")
     pusher.start()
     del pusher
 
