@@ -177,13 +177,14 @@ class WebPusher(object):
 
         fn = message["from"].get("first_name", "")
         ln = message["from"].get("last_name", "")
+        un = message["from"].get("username", "")
         if len(fn) > 10:                                                    # 避免出现名字特别长导致刷屏的情况
             fn = fn[:9]+"…"
         if len(ln) > 10:
             ln = ln[:9]+"…"
         name = " ".join([fn, ln])
 
-        print "{text} from {name}".format(text=message["text"], name=name)
+        print "{text} from {name}, {username}".format(text=message["text"], name=name, usermame=un)
 
         text = message["text"]
         userid = message["from"]["id"]
