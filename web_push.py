@@ -184,7 +184,7 @@ class WebPusher(object):
             ln = ln[:9]+"…"
         name = " ".join([fn, ln])
 
-        print "{text} from {name}, {username}".format(text=message["text"], name=name, usermame=un)
+        print "{text} from {name}, {username}".format(text=message["text"], name=name, username=un)
 
         text = message["text"]
         userid = message["from"]["id"]
