@@ -167,7 +167,7 @@ class WebPusher(object):
         """\
         处理收到的消息
         """
-        welcome = u"欢迎使用linux.cn非官方新闻推送bot！\n"
+        welcome = u"欢迎使用南航教务处新闻推送bot！\n"
 
         help_str = u"""命令列表：
         /getlatest   -  获取最近新闻
