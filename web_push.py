@@ -140,11 +140,16 @@ class WebPusher(object):
         print "Start updating messages"
 
         while self.run:
-            result = self.bot.get_updates()
-            if result:
-                messages = result["result"]
-                for message in messages:
-                    self.__message_queue.put(message["message"])
+            try:
+                result = self.bot.get_updates()
+            except RemoteServerException, code:
+                if code == 504:
+                    print "504 Gateway Timeout", time.ctime()
+            else:
+                if result:
+                    messages = result["result"]
+                    for message in messages:
+                        self.__message_queue.put(message["message"])
 
         print "Stop updating messages"
 
