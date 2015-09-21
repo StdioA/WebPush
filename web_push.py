@@ -9,7 +9,9 @@ import threading
 import Queue
 import sys
 
-from tgbot import TgBot as tgbot
+# from tgbot import TgBot as tgbot
+import tgbot
+
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -34,7 +36,7 @@ class WebPusher(object):
             self.subscriber = []
 
         # del self.news_list[0]
-        self.bot = tgbot(token)
+        self.bot = tgbot.TgBot(token)
         print "Bot start:", self.bot.offset
 
     def get_news_ded(self):
@@ -142,7 +144,7 @@ class WebPusher(object):
         while self.run:
             try:
                 result = self.bot.get_updates()
-            except RemoteServerException, code:
+            except tgbot.RemoteServerException, code:
                 if code == 504:
                     print "504 Gateway Timeout", time.ctime()
             else:
