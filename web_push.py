@@ -93,9 +93,10 @@ class WebPusher(object):
         """
         title, href = news
         try:
-            print "Push news:", title
+            print "Push news:", title.decode('gbk').encode('utf-8')
         except UnicodeEncodeError:
-            print "Push news:", href
+            # print "Push news:", href
+            print href
 
         for user in self.subscriber:
             self.bot.send_message(user, '\n'.join([title, href]))
