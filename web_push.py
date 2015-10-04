@@ -94,7 +94,7 @@ class WebPusher(object):
         title, href = news
         try:
             print "Push news:", title.decode('gbk').encode('utf-8')
-        except UnicodeEncodeError:
+        except UnicodeEncodeError, UnicodeDecodeError:
             # print "Push news:", href
             print href
 
