@@ -45,7 +45,11 @@ class WebPusher(object):
         """
         new_news = []
         url = 'http://ded.nuaa.edu.cn/HomePage/articles/'
-        hr = requests.get(url)
+        try:
+            hr = requests.get(url)
+        except requests.ConnectionError:
+            return []
+
         if hr.status_code != 200:
             return []
 
