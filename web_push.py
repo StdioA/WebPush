@@ -241,7 +241,13 @@ class WebPusher(object):
         thread_list = [threading.Thread(target=f) for f in func_list]                                   # 创建线程
         # map(lambda x: x.setDaemon(True), [thread_list[1]])
         map(lambda x: x.start(), thread_list)                                                           # 启动线程
-        map(lambda x: x.join(), thread_list)
+
+        while self.run:
+            for thread in thread_list:
+                if not thread.isAlive():
+                    self.run = False
+            time.sleep(1)
+        map(lambda x: x.join(), thread_list)                                                            # 等待所有程序结束
 
         # 自己进行结束工作要比写在__del__里更稳妥！
         pickle.dump(self.news_list, file(self.fname, 'wb'))
