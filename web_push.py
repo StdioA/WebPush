@@ -8,6 +8,7 @@ import time
 import threading
 import Queue
 import sys
+import ConfigParser
 
 # from tgbot import TgBot as tgbot
 import tgbot
@@ -18,7 +19,15 @@ sys.setdefaultencoding('utf-8')
 
 
 class WebPusher(object):
-    def __init__(self, token, fname="ded_nuaa.dat"):
+    def __init__(self, token=None, fname="ded_nuaa.dat", confname="./config.cfg"):
+        # 读取设置
+        config = ConfigParser.ConfigParser()
+        config.read(confname)
+        self.owner = int(config.get("pushbot", "owner"))
+        if not token:
+            token = config.get("tgbot", "token")
+
+
         self.__message_queue = Queue.Queue()                      # 命令队列
         self.__news_queue = Queue.Queue()                         # 新闻队列，用于传输更新的新闻
         self.run = True                                           # 判定是否需要结束程序
@@ -35,8 +44,8 @@ class WebPusher(object):
         except IOError:
             self.subscriber = []
 
-        # del self.news_list[0]
-        self.bot = tgbot.TgBot(token)
+
+        self.bot = tgbot.TgBot(token, confname=confname)
         print "Bot start:", self.bot.offset
 
     def get_news_ded(self):
@@ -229,7 +238,7 @@ class WebPusher(object):
             name = ' '.join([message["from"]["first_name"], message["from"]["last_name"]])
             self.bot.send_message(message["chat"]["id"], name+" "+time.ctime())
 
-        elif text == "/kill" and message["chat"]["id"] == 90625935:
+        elif text == "/kill" and message["chat"]["id"] == self.owner:
             self.run = False
 
     def start(self):
@@ -255,7 +264,11 @@ class WebPusher(object):
         print "Bot stop:", self.bot.offset
 
 if __name__ == '__main__':
-    pusher = WebPusher('132880227:AAGRvutZVf110Yc2Xbb43fn9xCQlDRkaLiY', fname="ded_nuaa.dat")
+    # config = ConfigParser.ConfigParser()
+    # config.read("./config.cfg")
+    # bot_token = config.get("tgbot", "token")
+    # pusher = WebPusher(bot_token, fname="ded_nuaa.dat", config="./config.cfg")
+    pusher = WebPusher(fname="ded_nuaa.dat", confname="./config.cfg")
     pusher.start()
     del pusher
 
