@@ -268,7 +268,7 @@ if __name__ == '__main__':
     # config.read("./config.cfg")
     # bot_token = config.get("tgbot", "token")
     # pusher = WebPusher(bot_token, fname="ded_nuaa.dat", config="./config.cfg")
-    pusher = WebPusher(fname="ded_nuaa.dat", config="./config.cfg")
+    pusher = WebPusher(fname="ded_nuaa.dat", confname="./config.cfg")
     pusher.start()
     del pusher
 
