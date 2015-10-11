@@ -31,12 +31,14 @@ class TgBot(object):
         if isinstance(token, str):                              # 读取bot token
             self.token = token
 
-        if isinstance(confname, str):                           # TODO: 考虑是否要从配置文件里读入token
+        if isinstance(confname, str):
             self.confname = confname
 
         conf = ConfigParser.ConfigParser()
         conf.read(confname)
-        self.offset = int(conf.get("config", "offset"))
+        self.offset = int(conf.get("tgbot", "offset"))
+        if token is None:
+            self.token = conf.get("tgbot", "token")
 
         self.url = self.url.format(token=token, method="{method}")
         if checkvalid:
@@ -156,7 +158,7 @@ class TgBot(object):
         conf = ConfigParser.ConfigParser()
 
         conf.read(self.confname)
-        conf.set("config", "offset", self.offset)
+        conf.set("tgbot", "offset", self.offset)
         conf.write(open("./config.cfg", "w"))
 
 if __name__ == '__main__':
