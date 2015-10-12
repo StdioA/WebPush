@@ -161,6 +161,8 @@ class WebPusher(object):
             except tgbot.RemoteServerException, code:
                 if code == 504:
                     print "504 Gateway Timeout", time.ctime()
+            except requests.ConnectionError:
+                pass
             else:
                 if result:
                     messages = result["result"]
