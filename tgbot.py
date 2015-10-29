@@ -76,8 +76,8 @@ class TgBot(object):
         Function sendMessage
         """
 
-        if not isinstance(chat_id, int):
-            raise TypeError("Parameter chat_id should be a integer")
+        if not isinstance(chat_id, (int, str, unicode)):
+            raise TypeError("Parameter chat_id should be a integer or a string")
         elif not isinstance(text, unicode):
             text = unicode(text)
             
@@ -98,12 +98,12 @@ class TgBot(object):
         Function forwardMessage
         """
 
-        if not isinstance(chat_id, int):
-            raise TypeError("Parameter chat_id should be a integer")
-        if not isinstance(from_chat_id, int):
-            raise TypeError("Parameter from_chat_id should be a integer")
-        elif not isinstance(message_id, int):
-            raise TypeError("Parameter message_id should be a integer")
+        if not isinstance(chat_id, (int, str, unicode)):
+            raise TypeError("Parameter chat_id should be a integer or a string")
+        if not isinstance(from_chat_id, (int, str, unicode)):
+            raise TypeError("Parameter from_chat_id should be a integer or a string")
+        elif not isinstance(message_id, (int, str, unicode)):
+            raise TypeError("Parameter message_id should be a integer or a string")
 
         kwargs = {"chat_id": chat_id,
                   "from_chat_id": from_chat_id,
