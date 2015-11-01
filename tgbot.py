@@ -4,7 +4,6 @@
 import requests
 import ConfigParser
 
-
 class RemoteServerException(Exception):                                     # TODO: 考虑将状态码在本类中进行处理
     def __str__(self):
         if len(self.args) == 2:
@@ -40,7 +39,7 @@ class TgBot(object):
         if token is None:
             self.token = conf.get("tgbot", "token")
 
-        self.url = self.url.format(token=token, method="{method}")
+        self.url = self.url.format(token=self.token, method="{method}")
         if checkvalid:
             self.test()
 

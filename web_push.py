@@ -9,6 +9,7 @@ import threading
 import Queue
 import sys
 import ConfigParser
+import logging
 
 # from tgbot import TgBot as tgbot
 import tgbot
@@ -26,6 +27,24 @@ class WebPusher(object):
         self.owner = int(config.get("pushbot", "owner"))
         if not token:
             token = config.get("tgbot", "token")
+
+        # 设置logger
+        try:
+            log_filename = config.get("pushbot", "log")
+        except ConfigParser.NoOptionError:
+            log_filename = ""
+
+        self.logger = logging.Logger("webpush")
+        if log_filename:
+            log_stream = logging.FileHandler(log_filename,
+                                    mode="a", encoding="utf-8")
+        else:
+            log_stream = logging.StreamHandler(sys.stdout)
+        self.logger.setLevel(logging.INFO)
+        formatter = logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s",
+                                      datefmt="%Y %b %d %H:%M:%S")
+        log_stream.setFormatter(formatter)
+        self.logger.addHandler(log_stream)
 
 
         self.__message_queue = Queue.Queue()                      # 命令队列
@@ -46,6 +65,7 @@ class WebPusher(object):
 
 
         self.bot = tgbot.TgBot(token, confname=confname)
+        self.logger.info("Service start")
         print "Bot start:", self.bot.offset
 
     def get_news_ded(self):
@@ -105,11 +125,12 @@ class WebPusher(object):
         将新闻推送至tg账号
         """
         title, href = news
-        try:
-            print "Push news:", title.encode('utf-8')
-        except (UnicodeEncodeError, UnicodeDecodeError):
-            # print "Push news:", href
-            print href
+        # try:
+        #     print "Push news:", title.encode('utf-8')
+        # except (UnicodeEncodeError, UnicodeDecodeError):
+        #     print href
+
+        self.logger.info("Push news: "+title.encode('utf-8'))
 
         for user in self.subscriber:
             self.bot.send_message(user, '\n'.join([title, href]))
@@ -160,7 +181,8 @@ class WebPusher(object):
                 result = self.bot.get_updates()
             except tgbot.RemoteServerException, code:
                 if code == 504:
-                    print "504 Gateway Timeout", time.ctime()
+                    # print "504 Gateway Timeout", time.ctime()
+                    self.logger.error("504 Gateway Timeout")
             except requests.ConnectionError:
                 pass
             else:
@@ -207,7 +229,9 @@ class WebPusher(object):
             ln = ln[:9]+"…"
         name = " ".join([fn, ln])
 
-        print "{text} from {name}, {username}".format(text=message["text"], name=name, username=un)
+        # print "{text} from {name}, {username}".format(text=message["text"], name=name, username=un)
+        self.logger.info("{text} from {name}, {username}".format(
+                        text=message["text"], name=name, username=un))
 
         text = message["text"]
         userid = message["from"]["id"]
@@ -264,12 +288,9 @@ class WebPusher(object):
         pickle.dump(self.news_list, file(self.fname, 'wb'))
         pickle.dump(self.subscriber, file("subscriber.dat", 'wb'))
         print "Bot stop:", self.bot.offset
+        self.logger.info("Service stop")
 
 if __name__ == '__main__':
-    # config = ConfigParser.ConfigParser()
-    # config.read("./config.cfg")
-    # bot_token = config.get("tgbot", "token")
-    # pusher = WebPusher(bot_token, fname="ded_nuaa.dat", config="./config.cfg")
     pusher = WebPusher(fname="ded_nuaa.dat", confname="./config.cfg")
     pusher.start()
     del pusher
