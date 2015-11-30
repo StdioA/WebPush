@@ -10,8 +10,6 @@ import Queue
 import sys
 import ConfigParser
 import logging
-
-# from tgbot import TgBot as tgbot
 import tgbot
 
 
@@ -25,8 +23,6 @@ class WebPusher(object):
         config = ConfigParser.ConfigParser()
         config.read(confname)
         self.owner = int(config.get("pushbot", "owner"))
-        if not token:
-            token = config.get("tgbot", "token")
 
         # 设置logger
         try:
@@ -46,12 +42,11 @@ class WebPusher(object):
         log_stream.setFormatter(formatter)
         self.logger.addHandler(log_stream)
 
-
-        self.__message_queue = Queue.Queue()                      # 命令队列
-        self.__news_queue = Queue.Queue()                         # 新闻队列，用于传输更新的新闻
-        self.run = True                                           # 判定是否需要结束程序
-
-        self.news_getter = self.get_news_ded                      # 新闻抓取函数，配置单独提出来
+        self.__message_queue = Queue.Queue()                                    # 命令队列
+        self.__news_queue = Queue.Queue()                                       # 新闻队列，用于传输更新的新闻
+        self.run = True                                                         # 程序运行标志
+        
+        self.news_getter = self.get_news_ded                                    # 新闻抓取函数，配置单独提出来
         self.fname = fname
         try:
             self.news_list = pickle.load(file(fname, 'rb'))
@@ -63,8 +58,11 @@ class WebPusher(object):
         except IOError:
             self.subscriber = []
 
-
+        # 设置bot
+        if not token:
+            token = config.get("tgbot", "token")
         self.bot = tgbot.TgBot(token, confname=confname)
+
         self.logger.info("Service start")
         print "Bot start:", self.bot.offset
 
@@ -76,7 +74,8 @@ class WebPusher(object):
         url = 'http://ded.nuaa.edu.cn/HomePage/articles/'
         try:
             hr = requests.get(url)
-        except requests.ConnectionError:
+        except requests.ConnectionError, e:
+            self.logger.error(e.message)
             return []
 
         if hr.status_code != 200:
@@ -146,7 +145,7 @@ class WebPusher(object):
             for news in new_news:
                 self.__news_queue.put(news)
 
-            pickle.dump(self.news_list, file(self.fname, 'wb')) # 定时将新闻列表写回，防止出现程序意外停止重启后推送一堆新闻的情况
+            pickle.dump(self.news_list, file(self.fname, 'wb'))                 # 定时将新闻列表写回，防止出现程序意外停止重启后推送一堆新闻的情况
 
             for i in range(300):
                 if not self.run:
@@ -160,10 +159,10 @@ class WebPusher(object):
         """
         print "Start listening to news"
 
-        while self.run or (not self.__news_queue.empty()):    # 若run变为0，则将消息处理完再退出线程
+        while self.run or (not self.__news_queue.empty()):                      # 若run变为0，则将消息处理完再退出线程
             try:
                 while True:
-                    news = self.__news_queue.get(timeout=1)   # 阻塞方式刷新，最长时间为1s
+                    news = self.__news_queue.get(timeout=1)                     # 阻塞方式刷新，最长时间为1s
                     self.push_news(news)
             except Queue.Empty:
                 pass
@@ -181,8 +180,9 @@ class WebPusher(object):
                 result = self.bot.get_updates()
             except tgbot.RemoteServerException, code:
                 if code == 504:
-                    # print "504 Gateway Timeout", time.ctime()
                     self.logger.error("504 Gateway Timeout")
+                else:
+                    self.logger.error("ConnectionError "+str(code))
             except requests.ConnectionError:
                 pass
             else:
@@ -199,7 +199,7 @@ class WebPusher(object):
         """
         print "Start listening to messages"
 
-        while self.run or (not self.__news_queue.empty()):  # 若run变为0，则处理完待处理的消息再结束线程
+        while self.run or (not self.__news_queue.empty()):                      # 若run变为0，则处理完待处理的消息再结束线程
             try:
                 message = self.__message_queue.get(timeout=1)
                 self.execute_message(message)
@@ -223,13 +223,12 @@ class WebPusher(object):
         fn = message["from"].get("first_name", "")
         ln = message["from"].get("last_name", "")
         un = message["from"].get("username", "")
-        if len(fn) > 10:                                                    # 避免出现名字特别长导致刷屏的情况
+        if len(fn) > 10:                                                        # 避免出现名字特别长导致刷屏的情况
             fn = fn[:9]+"…"
         if len(ln) > 10:
             ln = ln[:9]+"…"
         name = " ".join([fn, ln])
 
-        # print "{text} from {name}, {username}".format(text=message["text"], name=name, username=un)
         self.logger.info("{text} from {name}, {username}".format(
                         text=message["text"], name=name, username=un))
 
@@ -261,7 +260,8 @@ class WebPusher(object):
             self.bot.send_message(message["chat"]["id"], '\n'.join([title, href]))
 
         elif text == "/test":
-            name = ' '.join([message["from"]["first_name"], message["from"]["last_name"]])
+            name = ' '.join([message["from"]["first_name"],
+                                 message["from"]["last_name"]])
             self.bot.send_message(message["chat"]["id"], name+" "+time.ctime())
 
         elif text == "/kill" and message["chat"]["id"] == self.owner:
@@ -271,18 +271,19 @@ class WebPusher(object):
         """\
         主函数
         """
-        func_list = [self.update_messages, self.update_news, self.listen_messages, self.listen_news]
+        func_list = [self.update_messages, self.update_news,
+                     self.listen_messages, self.listen_news]
 
-        thread_list = [threading.Thread(target=f) for f in func_list]                                   # 创建线程
+        thread_list = [threading.Thread(target=f) for f in func_list]           # 创建线程
         # map(lambda x: x.setDaemon(True), [thread_list[1]])
-        map(lambda x: x.start(), thread_list)                                                           # 启动线程
+        map(lambda x: x.start(), thread_list)                                   # 启动线程
 
-        while self.run:
+        while self.run:                                                         # 循环检测是否所有线程均正常运行，若线程异常退出，则结束所有线程
             for thread in thread_list:
                 if not thread.isAlive():
                     self.run = False
             time.sleep(1)
-        map(lambda x: x.join(), thread_list)                                                            # 等待所有程序结束
+        map(lambda x: x.join(), thread_list)                                    # 等待所有程序结束
 
         # 自己进行结束工作要比写在__del__里更稳妥！
         pickle.dump(self.news_list, file(self.fname, 'wb'))
@@ -290,12 +291,10 @@ class WebPusher(object):
         print "Bot stop:", self.bot.offset
         self.logger.info("Service stop")
 
+
 if __name__ == '__main__':
     pusher = WebPusher(fname="ded_nuaa.dat", confname="./config.cfg")
     pusher.start()
     del pusher
 
 # TODO: 添加一些常用命令
-# TODO: 做成一个订阅号
-# TODO: 考虑用multiprocessing解决问题（如果CPU是单核，多线程就可以了，不过可以考虑使用multiprocessing.dummy）
-# TODO: 用logging记录调试信息(可以用tail -f实时查看)
