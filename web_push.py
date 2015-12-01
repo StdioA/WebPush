@@ -75,7 +75,7 @@ class WebPusher(object):
         try:
             hr = requests.get(url)
         except requests.ConnectionError, e:
-            self.logger.error(e.message)
+            self.logger.error(str(e))
             return []
 
         if hr.status_code != 200:
@@ -124,10 +124,6 @@ class WebPusher(object):
         将新闻推送至tg账号
         """
         title, href = news
-        # try:
-        #     print "Push news:", title.encode('utf-8')
-        # except (UnicodeEncodeError, UnicodeDecodeError):
-        #     print href
 
         self.logger.info("Push news: "+title.encode('utf-8'))
 
@@ -178,11 +174,11 @@ class WebPusher(object):
         while self.run:
             try:
                 result = self.bot.get_updates()
-            except tgbot.RemoteServerException, code:
-                if code == 504:
+            except tgbot.RemoteServerException, e:
+                if e.code == 504:
                     self.logger.error("504 Gateway Timeout")
                 else:
-                    self.logger.error("ConnectionError "+str(code))
+                    self.logger.error("ConnectionError "+str(e))
             except requests.ConnectionError:
                 pass
             else:
