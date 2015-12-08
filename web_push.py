@@ -73,9 +73,13 @@ class WebPusher(object):
         new_news = []
         url = 'http://ded.nuaa.edu.cn/HomePage/articles/'
         try:
-            hr = requests.get(url)
+            # hr = requests.get(url)
+            hr = requests.get(url, timeout=(5.0, 5.0))
         except requests.ConnectionError, e:
-            self.logger.error(str(e))
+            self.logger.debug(str(e))
+            return []
+        except requests.exceptions.Timeout, e:
+            self.logger.debug(str(e))
             return []
 
         if hr.status_code != 200:
@@ -138,6 +142,7 @@ class WebPusher(object):
 
         while True:
             new_news = self.news_getter()
+            self.logger.debug("Update news")
             for news in new_news:
                 self.__news_queue.put(news)
 
@@ -148,6 +153,7 @@ class WebPusher(object):
                     print "Stop updating news"
                     return
                 time.sleep(1)
+            self.logger.debug("Circulation stop")
 
     def listen_news(self):
         """\

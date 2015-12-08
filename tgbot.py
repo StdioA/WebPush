@@ -5,12 +5,12 @@ import requests
 import ConfigParser        
 
 class RemoteServerException(Exception):                                     # TODO: 考虑将状态码在本类中进行处理
-    def __init__(self):
+    def __init__(self, status_code):
         super(RemoteServerException, self).__init__()
         if len(self.args) == 2:
             self.code, self.reason = self.args
         else:
-            self.code = self.args
+            self.code = status_code
 
     def __str__(self):
         if len(self.args) == 2:
