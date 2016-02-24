@@ -184,7 +184,10 @@ class WebPusher(object):
                 if e.code == 504:
                     self.logger.error("504 Gateway Timeout")
                 else:
-                    self.logger.error("ConnectionError "+str(e))
+                    try:
+                        self.logger.error("ConnectionError "+str(e))
+                    except TypeError:
+                        self.logger.error("ConnectionError")
             except requests.ConnectionError:
                 pass
             else:
