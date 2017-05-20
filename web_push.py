@@ -10,7 +10,9 @@ import Queue
 import sys
 import ConfigParser
 import logging
+import urlparse
 import tgbot
+import re
 
 
 reload(sys)
@@ -66,9 +68,10 @@ class WebPusher(object):
         self.logger.info("Service start")
         print "Bot start:", self.bot.offset
 
-    def get_news_ded(self):
+    def get_news_ded_deprecated(self):
         """\
         获取最新的教务处新闻
+        教务处首页改版，已废弃
         """
         new_news = []
         url = 'http://ded.nuaa.edu.cn/HomePage/articles/'
@@ -120,6 +123,31 @@ class WebPusher(object):
                 if (title and href) and ((title, href) not in self.news_list):
                     new_news.append((title, href))
                     self.news_list.append((title, href))
+
+        return new_news
+
+    def get_news_ded(self):
+        root_url = "http://aao.nuaa.edu.cn"
+        list_url = "/index_sub/notice/0"
+        url = urlparse.urljoin(root_url, list_url)
+
+        href_reg = re.compile(r".+\'(.+)'.+")
+
+        hr = requests.get(url)
+        if hr.status_code != 200:
+            return []
+
+        new_news = []
+        html = bs.BeautifulSoup(hr.text)
+        elements = html.findAll("a")
+        for element in reversed(elements):
+            title = element.text
+            href_rel = href_reg.search(dict(element.attrs)["onclick"]).group(1)
+            href = urlparse.urljoin(root_url, href_rel)
+
+            if (title and href) and ((title, href) not in self.news_list):
+                new_news.append((title, href))
+                self.news_list.append((title, href))
 
         return new_news
 
